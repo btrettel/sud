@@ -1,2 +1,16 @@
+- Sqlite
+   - [CHECK constraints](https://www.sqlite.org/lang_createtable.html#check_constraints) (bounds)
+   - [NOT NULL constaints](https://www.sqlite.org/lang_createtable.html#not_null_constraints)
+   - [STRICT keyword](https://www.sqlite.org/draft/stricttables.html); [also see](https://news.ycombinator.com/item?id=28259104)
+- [uncertainties](https://github.com/lebigot/uncertainties)
+- [pint](https://github.com/hgrecco/pint)
+- Pylint
+- pytest
+- Function to update Sqlite database with mean and standard deviation that checks that the units are as expected.
+- Mandatory uncertainty column
+- schema table listing units of each column, TeX code for variable, text description of each ==> read in from a CSV file before creating database?
+- Schema CSV file also has optional database constraint information: lower bound, upper bound
 - <https://software-carpentry.org/blog/2013/05/reuse-your-data.html>
 - output stored in a single file with revision number, whether code was modified
+- Use sets of fake data for testing purposes.
+- track whether uncertainty was estimated for a particular data point
