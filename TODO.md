@@ -14,3 +14,7 @@
 - output stored in a single file with revision number, whether code was modified
 - Use sets of fake data for testing purposes.
 - track whether uncertainty was estimated for a particular data point
+- Write Python wrapper functions to INSERT, UPDATE, and SELECT data with uncertainties and units from a Sqlite database
+- <https://stackoverflow.com/questions/18621513/python-insert-numpy-array-into-sqlite3-database>
+- <https://news.ycombinator.com/item?id=21732821>
+- <https://news.ycombinator.com/item?id=31221672>
