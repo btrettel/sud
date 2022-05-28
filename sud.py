@@ -9,6 +9,7 @@ from uncertainties import ufloat, unumpy
 import sys
 import warnings
 import scipy.stats
+import math
 
 interval_probability_level = 0.95
 
@@ -65,6 +66,44 @@ def test_has_uncertainty():
     # ndarray with units with uncertainty
     x = ureg.Quantity(unumpy.uarray([1, 2], [0.01, 0.002]), ureg.meter)
     assert(has_uncertainty(x))
+
+def has_units(x):
+    # This will work for floats, arrays, and ndarrays.
+    
+    try:
+        # assume that this is an array or ndarray at first
+        len(x) # This will fail if not an array or ndarray.
+        
+        for val in x:
+            try:
+                val.units
+            except:
+                return False
+        
+        return True
+    except:
+        try:
+            x.units
+            return True
+        except:
+            return False
+
+def test_has_units():
+    # float without units
+    x = 0.20
+    assert(not(has_units(x)))
+    
+    # float with units
+    x = 0.20 * ureg.meter
+    assert(has_units(x))
+    
+    # ndarray without units
+    x = np.array([1., 2.])
+    assert(not(has_units(x)))
+    
+    # ndarray with units
+    x = ureg.Quantity(np.array([1., 2.]), ureg.meter)
+    assert(has_units(x))
 
 def read_csv(filename):
     with open(filename) as f:
@@ -130,9 +169,13 @@ def test_read_csv():
     # Test that the correct number of cols is read.
     assert(len(df.keys()) == 4)
     
-    # TODO: Test that the correct units are read (including str and bool).
+    # Test that the correct units are read.
     assert(df['L'].check('[length]'))
     assert(df['Re'].check(''))
+    
+    # TODO: Check that str and filename columns are strings.
+    for value in df['classification']:
+        assert(isinstance(value, str))
     
     # Check that the numbers are as expected.
     assert(np.allclose(df['L'].magnitude, np.array([0.1, 0.2, 0.3, 0.4, 0.5])))
@@ -140,14 +183,13 @@ def test_read_csv():
     assert(np.allclose(df['U'].magnitude, np.array([np.nan, 2, np.nan, 4, 7]), equal_nan=True))
     assert(df['classification'] == ['A', 'B', 'C', 'A', 'C'])
     
-    # TODO: Check that str and filename columns are strings.
-    
     # TODO: Check that filenames exist.
     
     # TODO: Test that data with uncertainties has uncertainties, and the uncertainties are correct.
 
 def add_percent_uncertainty(arr, percent):
     assert(not(has_uncertainty(arr)))
+    assert(has_units(arr))
     
     return_arr = np.array([])
     
@@ -161,8 +203,25 @@ def add_percent_uncertainty(arr, percent):
     
     return return_arr
 
+def test_add_percent_uncertainty():
+    arr = ureg.Quantity(np.array([1., 2., 3.]), ureg.meter)
+    assert(not(has_uncertainty(arr)))
+    
+    arr = add_percent_uncertainty(arr, 10.)
+    
+    # test that uncertainty is present
+    assert(has_uncertainty(arr))
+    
+    # TODO: test that the amount of uncertainty is correct
+    z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
+    for value in arr:
+        number = value.magnitude
+        assert(math.isclose(number.std_dev, number.nominal_value * 0.1 / z))
+
 def add_absolute_uncertainty(arr, uncertainty):
     assert(not(has_uncertainty(arr)))
+    assert(has_units(arr))
+    assert(has_units(uncertainty))
     
     return_arr = np.array([])
     
@@ -175,6 +234,21 @@ def add_absolute_uncertainty(arr, uncertainty):
     return_arr = ureg.Quantity(return_arr, arr.units)
     
     return return_arr
+
+def test_add_absolute_uncertainty():
+    arr = ureg.Quantity(np.array([1., 2., 3.]), ureg.meter)
+    assert(not(has_uncertainty(arr)))
+    
+    arr = add_absolute_uncertainty(arr, 0.1 * ureg.meter)
+    
+    # test that uncertainty is present
+    assert(has_uncertainty(arr))
+    
+    # TODO: test that the amount of uncertainty is correct
+    z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
+    for value in arr:
+        number = value.magnitude
+        assert(math.isclose(number.std_dev, 0.1 / z))
 
 # Configure Pint
 
@@ -189,7 +263,7 @@ ureg.define('fraction = [] = frac')
 ureg.define('percent = 1e-2 frac = pct')
 ureg.define('ndm = []') # Non-DiMensional
 
-# TODO: Add tests for all functions created so far.
+# TODO: Write wrapper functions so that you can switch out Pint and uncertainties later if you want to.
 # TODO: Add ability to handle an uncertainty column in the CSV file.
 # TODO: Add the ability to handle a bool column in the CSV file. For example: screen: true/false
 # TODO: Add the ability to handle a filename column in the CSV file. Check for the existence of the file.
