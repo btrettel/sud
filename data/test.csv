@@ -1,6 +1,6 @@
-"L (mm)","L uncertainty (mm)",Re,"Re uncertainty %","U (m/s)","classification (str)"
-0.1,0.05,100000,10,,A
-0.2,0.05,100000,10,2,B
-0.3,0.05,100000,20,,C
-0.4,0.2,100000,20,4,A
-0.5,0.2,100000,20,7,C
+"L (mm)","L uncertainty (mm)",Re,"Re uncertainty %","U (m/s)","screen (bool)","classification (str)"
+0.1,0.05,100000,10,,FALSE,A
+0.2,0.05,100000,10,2,FALSE,B
+0.3,0.05,100000,20,,TRUE,C
+0.4,0.2,100000,20,4,TRUE,A
+0.5,0.2,100000,20,7,FALSE,C

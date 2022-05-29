@@ -127,16 +127,28 @@ def read_csv(filename):
         
         for row in reader:
             for field_name, short_field_name, unit in zip(field_names, short_field_names, units):
-                if unit != 'str':
+                if (unit == 'str') or (unit == 'filename'):
+                    value = row[field_name]
+                    is_float = False
+                    
+                    if unit == 'filename':
+                        assert(os.path.isfile(value))
+                elif unit == 'bool':
+                    if row[field_name].lower() == 'true':
+                        value = True
+                    elif row[field_name].lower() == 'false':
+                        value = False
+                    else:
+                        raise ValueError("Invalid boolean:", row[field_name])
+                    
+                    is_float = False
+                else:
                     if row[field_name] == '':
                         value = np.nan
                     else:
                         value = float(row[field_name])
                     
                     is_float = True
-                else:
-                    value = row[field_name]
-                    is_float = False
                 
                 if short_field_name in df:
                     if is_float:
@@ -150,7 +162,7 @@ def read_csv(filename):
                         df[short_field_name] = [value]
         
         for short_field_name, unit in zip(short_field_names, units):
-            if unit != 'str':
+            if (unit != 'str') and (unit != 'filename') and (unit != 'bool'):
                 df[short_field_name] = ureg.Quantity(df[short_field_name], unit)
     
     # Make sure that all of the keys have the same length.
@@ -193,7 +205,7 @@ def test_read_csv():
         assert(len(df[key]) == 5)
     
     # Test that the correct number of cols is read.
-    assert(len(df.keys()) == 4)
+    assert(len(df.keys()) == 5)
     
     # Test that the correct units are read.
     assert(df['L'].check('[length]'))
@@ -203,14 +215,17 @@ def test_read_csv():
     assert(has_uncertainty(df['L']))
     assert(has_uncertainty(df['Re']))
     
-    # TODO: Check that str and filename columns are strings.
+    # TODO: Check that str and filename columns are strings, and that the bool columns are bools.
     for value in df['classification']:
         assert(isinstance(value, str))
+    for value in df['screen']:
+        assert(isinstance(value, bool))
     
     # Check that the numbers are as expected, including both mean and uncertainties.
     assert(all_close_ud(df['L'], ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm)))
     assert(all_close_ud(df['Re'], ureg.Quantity(unumpy.uarray([100000, 100000, 100000, 100000, 100000], (100000 / 1.959963984540054) * np.array([0.1, 0.1, 0.2, 0.2, 0.2])), ureg('ndm'))))
     assert(np.allclose(df['U'].magnitude, np.array([np.nan, 2, np.nan, 4, 7]), equal_nan=True))
+    assert(df['screen'] == [False, False, True, True, False])
     assert(df['classification'] == ['A', 'B', 'C', 'A', 'C'])
     
     # TODO: Check that filenames exist.
@@ -323,5 +338,4 @@ ureg.define('ndm = []') # Non-DiMensional
 # TODO: Write wrapper functions so that you can switch out Pint and uncertainties later if you want to.
 # TODO: Add the ability to handle a bool column in the CSV file. For example: screen: true/false
 # TODO: Add the ability to handle a filename column in the CSV file. Check for the existence of the file.
-# TODO: Add covariance data as (for example) errors in Re_j0 will be correlated with errors in d_0. It looks like uncertainties uses the approximation E[f(X)] = f(E[X]), so for Re, E[Re] = E[U] * E[d] / E[nu]. Calculate E[U] and set sigma_U manually, then recalculate Re using U with uncertainties. That'll handle the covariances.
-# TODO: Add docstrings and doctest.
+# TODO: Add docstrings.
