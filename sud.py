@@ -170,6 +170,18 @@ def read_csv(filename):
             
             df[short_field_name_nominal] = ureg.Quantity(arr, unit)
             del df[short_field_name]
+        if short_field_name.endswith(' uncertainty %'):
+            short_field_name_nominal = short_field_name.replace(' uncertainty %', '').strip()
+            assert(short_field_name_nominal in df.keys())
+            arr = np.array([])
+            z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
+            for nominal, percent_uncertainty in zip(df[short_field_name_nominal], df[short_field_name]):
+                nominal_magnitude = nominal.magnitude
+                std_dev_magnitude = (percent_uncertainty.magnitude / 100.) / z
+                arr = np.append(arr, ufloat(nominal_magnitude, std_dev_magnitude))
+            
+            df[short_field_name_nominal] = ureg.Quantity(arr, unit)
+            del df[short_field_name]
     
     return df
 
@@ -181,28 +193,31 @@ def test_read_csv():
         assert(len(df[key]) == 5)
     
     # Test that the correct number of cols is read.
-    assert(len(df.keys()) == 5)
+    assert(len(df.keys()) == 4)
     
     # Test that the correct units are read.
     assert(df['L'].check('[length]'))
     assert(df['Re'].check(''))
     
-    # TODO: Test that data with uncertainties has uncertainties, and the uncertainties are correct.
+    # Test that data with uncertainties has uncertainties.
     assert(has_uncertainty(df['L']))
+    assert(has_uncertainty(df['Re']))
     
     # TODO: Check that str and filename columns are strings.
     for value in df['classification']:
         assert(isinstance(value, str))
     
-    # Check that the numbers are as expected.
+    # Check that the numbers are as expected, including both mean and uncertainties.
     assert(all_close_ud(df['L'], ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm)))
-    assert(np.allclose(df['Re'].magnitude, np.array([100000, 100000, 100000, 100000, 100000])))
+    assert(all_close_ud(df['Re'], ureg.Quantity(unumpy.uarray([100000, 100000, 100000, 100000, 100000], (100000 / 1.959963984540054) * np.array([0.1, 0.1, 0.2, 0.2, 0.2])), ureg('ndm'))))
     assert(np.allclose(df['U'].magnitude, np.array([np.nan, 2, np.nan, 4, 7]), equal_nan=True))
     assert(df['classification'] == ['A', 'B', 'C', 'A', 'C'])
     
     # TODO: Check that filenames exist.
 
 def all_close_ud(arr1, arr2):
+    # TODO: Add test for all_close_ud.
+    
     assert(has_uncertainty(arr1))
     assert(has_units(arr1))
     assert(has_uncertainty(arr2))
@@ -252,7 +267,7 @@ def test_add_percent_uncertainty():
     # test that uncertainty is present
     assert(has_uncertainty(arr))
     
-    # TODO: test that the amount of uncertainty is correct
+    # test that the amount of uncertainty is correct
     z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
     for value in arr:
         number = value.magnitude
@@ -284,7 +299,7 @@ def test_add_absolute_uncertainty():
     # test that uncertainty is present
     assert(has_uncertainty(arr))
     
-    # TODO: test that the amount of uncertainty is correct
+    # test that the amount of uncertainty is correct
     z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
     for value in arr:
         number = value.magnitude
@@ -304,7 +319,6 @@ ureg.define('percent = 1e-2 frac = pct')
 ureg.define('ndm = []') # Non-DiMensional
 
 # TODO: Write wrapper functions so that you can switch out Pint and uncertainties later if you want to.
-# TODO: Add ability to handle an uncertainty column in the CSV file.
 # TODO: Add the ability to handle a bool column in the CSV file. For example: screen: true/false
 # TODO: Add the ability to handle a filename column in the CSV file. Check for the existence of the file.
 # TODO: Add covariance data as (for example) errors in Re_j0 will be correlated with errors in d_0. It looks like uncertainties uses the approximation E[f(X)] = f(E[X]), so for Re, E[Re] = E[U] * E[d] / E[nu]. Calculate E[U] and set sigma_U manually, then recalculate Re using U with uncertainties. That'll handle the covariances.
