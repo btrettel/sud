@@ -157,6 +157,20 @@ def read_csv(filename):
     for short_field_name in short_field_names:
         assert(len(df[short_field_name]) == len(df[short_field_names[0]]))
     
+    # Add uncertainties if present.
+    for short_field_name, unit in zip(short_field_names, units):
+        if short_field_name.endswith(' uncertainty'):
+            short_field_name_nominal = short_field_name.replace(' uncertainty', '').strip()
+            assert(short_field_name_nominal in df.keys())
+            arr = np.array([])
+            for nominal, std_dev in zip(df[short_field_name_nominal], df[short_field_name]):
+                nominal_magnitude = nominal.magnitude
+                std_dev_magnitude = std_dev.magnitude
+                arr = np.append(arr, ufloat(nominal_magnitude, std_dev_magnitude))
+            
+            df[short_field_name_nominal] = ureg.Quantity(arr, unit)
+            del df[short_field_name]
+    
     return df
 
 def test_read_csv():
@@ -167,25 +181,51 @@ def test_read_csv():
         assert(len(df[key]) == 5)
     
     # Test that the correct number of cols is read.
-    assert(len(df.keys()) == 4)
+    assert(len(df.keys()) == 5)
     
     # Test that the correct units are read.
     assert(df['L'].check('[length]'))
     assert(df['Re'].check(''))
+    
+    # TODO: Test that data with uncertainties has uncertainties, and the uncertainties are correct.
+    assert(has_uncertainty(df['L']))
     
     # TODO: Check that str and filename columns are strings.
     for value in df['classification']:
         assert(isinstance(value, str))
     
     # Check that the numbers are as expected.
-    assert(np.allclose(df['L'].magnitude, np.array([0.1, 0.2, 0.3, 0.4, 0.5])))
+    assert(all_close_ud(df['L'], ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm)))
     assert(np.allclose(df['Re'].magnitude, np.array([100000, 100000, 100000, 100000, 100000])))
     assert(np.allclose(df['U'].magnitude, np.array([np.nan, 2, np.nan, 4, 7]), equal_nan=True))
     assert(df['classification'] == ['A', 'B', 'C', 'A', 'C'])
     
     # TODO: Check that filenames exist.
+
+def all_close_ud(arr1, arr2):
+    assert(has_uncertainty(arr1))
+    assert(has_units(arr1))
+    assert(has_uncertainty(arr2))
+    assert(has_units(arr2))
     
-    # TODO: Test that data with uncertainties has uncertainties, and the uncertainties are correct.
+    arr1_magnitude_nominal = []
+    arr2_magnitude_nominal = []
+    
+    arr1_magnitude_std_dev = []
+    arr2_magnitude_std_dev = []
+    
+    for value in arr1:
+        number = value.magnitude
+        arr1_magnitude_nominal = np.append(arr1_magnitude_nominal, [number.nominal_value])
+        arr1_magnitude_std_dev = np.append(arr1_magnitude_std_dev, [number.std_dev])
+    
+    for value in arr2:
+        number = value.magnitude
+        arr2_magnitude_nominal = np.append(arr2_magnitude_nominal, [number.nominal_value])
+        arr2_magnitude_std_dev = np.append(arr2_magnitude_std_dev, [number.std_dev])
+    
+    return np.allclose(arr1_magnitude_nominal, arr2_magnitude_nominal, equal_nan=True)
+    return np.allclose(arr1_magnitude_std_dev, arr2_magnitude_std_dev, equal_nan=True)
 
 def add_percent_uncertainty(arr, percent):
     assert(not(has_uncertainty(arr)))
@@ -267,5 +307,5 @@ ureg.define('ndm = []') # Non-DiMensional
 # TODO: Add ability to handle an uncertainty column in the CSV file.
 # TODO: Add the ability to handle a bool column in the CSV file. For example: screen: true/false
 # TODO: Add the ability to handle a filename column in the CSV file. Check for the existence of the file.
-# TODO: Add covariance data as (for example) Re_j0 will be correlated with d_0.
+# TODO: Add covariance data as (for example) errors in Re_j0 will be correlated with errors in d_0. It looks like uncertainties uses the approximation E[f(X)] = f(E[X]), so for Re, E[Re] = E[U] * E[d] / E[nu]. Calculate E[U] and set sigma_U manually, then recalculate Re using U with uncertainties. That'll handle the covariances.
 # TODO: Add docstrings and doctest.
