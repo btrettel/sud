@@ -13,6 +13,7 @@ import math
 import os.path
 
 interval_probability_level = 0.95
+z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
 
 def has_uncertainty(x):
     # This will work for floats, arrays, and ndarrays.
@@ -187,7 +188,6 @@ def read_csv(filename):
             short_field_name_nominal = short_field_name.replace(' uncertainty %', '').strip()
             assert(short_field_name_nominal in df.keys())
             arr = np.array([])
-            z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
             for nominal, percent_uncertainty in zip(df[short_field_name_nominal], df[short_field_name]):
                 nominal_magnitude = nominal.magnitude
                 std_dev_magnitude = nominal.magnitude * (percent_uncertainty.magnitude / 100.) / z
@@ -272,7 +272,6 @@ def add_percent_uncertainty(arr, percent):
     
     return_arr = np.array([])
     
-    z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
     multiplier = (percent / 100.) / z
     for value in arr:
         number = value.magnitude
@@ -292,7 +291,6 @@ def test_add_percent_uncertainty():
     assert(has_uncertainty(arr))
     
     # test that the amount of uncertainty is correct
-    z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
     for value in arr:
         number = value.magnitude
         assert(math.isclose(number.std_dev, number.nominal_value * 0.1 / z))
@@ -304,7 +302,6 @@ def add_absolute_uncertainty(arr, uncertainty):
     
     return_arr = np.array([])
     
-    z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
     uncertainty_magnitude = uncertainty.magnitude / z
     for value in arr:
         number = value.magnitude
@@ -324,7 +321,6 @@ def test_add_absolute_uncertainty():
     assert(has_uncertainty(arr))
     
     # test that the amount of uncertainty is correct
-    z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
     for value in arr:
         number = value.magnitude
         assert(math.isclose(number.std_dev, 0.1 / z))
