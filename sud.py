@@ -15,6 +15,10 @@ import os.path
 interval_probability_level = 0.95
 z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
 
+# <https://stackoverflow.com/a/14981125/1124489>
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
 def has_uncertainty(x):
     # This will work for floats, arrays, and ndarrays.
     
@@ -325,6 +329,60 @@ def test_add_absolute_uncertainty():
         number = value.magnitude
         assert(math.isclose(number.std_dev, 0.1 / z))
 
+def create_table_query_start(table_name):
+    return 'CREATE TABLE '+table_name+' ('
+
+def create_table_query_column(column_name, datatype, primary_key=False, not_null=False, lower_bound=None, upper_bound=None, end=False):
+    assert(datatype.lower() in {'integer', 'real', 'text'})
+    
+    return_string = '\n'+column_name+' '+datatype
+    
+    if primary_key:
+        return_string += ' PRIMARY KEY'
+    
+    if not_null:
+        return_string += ' NOT NULL'
+    
+    if not(lower_bound is None) or not(upper_bound is None):
+        return_string += ' CHECK '
+        if not(lower_bound is None) and not(upper_bound is None):
+            # TODO: Assert that lower_bound and upper_bound are floats.
+            return_string += '(('+column_name+' > '+str(lower_bound)+') and ('+column_name+' < '+str(upper_bound)+'))'
+        elif not(lower_bound is None):
+            return_string += '('+column_name+' > '+str(lower_bound)+')'
+        elif not(upper_bound is None):
+            return_string += '('+column_name+' < '+str(upper_bound)+')'
+        else:
+            raise ValueError("Invalid bounds?")
+    
+    return_string += ','
+    
+    if end:
+        return_string += '\n) STRICT;'
+    
+    return return_string
+
+def test_create_table_query():
+    create_query = create_table_query_start('jetbreakup')
+    create_query += create_table_query_column('id', 'integer', primary_key=True)
+    create_query += create_table_query_column('We_j0', 'real', not_null=True, lower_bound=0)
+    create_query += create_table_query_column('Re_j0', 'real', not_null=True, lower_bound=0, upper_bound=1e8)
+    create_query += create_table_query_column('Tubar_0', 'real', not_null=True, upper_bound=1, end=True)
+    
+    assert(create_query.startswith('CREATE TABLE '))
+    assert(create_query.endswith(') STRICT;'))
+    assert('PRIMARY KEY' in create_query)
+    assert(create_query.count('(') == create_query.count(')'))
+
+# def create_db(filename):
+    # try:
+        # con = sqlite3.connect(db_file)
+    # except Error as e:
+        # eprint(e)
+        # exit(-1)
+    
+    # c = con.cursor()
+
 # Configure Pint
 
 ureg = pint.UnitRegistry(system='mks',  auto_reduce_dimensions=True)
@@ -340,3 +398,6 @@ ureg.define('ndm = []') # Non-DiMensional
 
 # TODO: Write wrapper functions so that you can switch out Pint and uncertainties later if you want to.
 # TODO: Add docstrings.
+# TODO: Add uncertainty columns. uncertainty >= 0
+# TODO: Add dimensions and LaTeX string to an info table.
+# TODO: Add covariance column. Constraint: <https://math.stackexchange.com/a/3830254>
