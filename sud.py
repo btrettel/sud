@@ -10,6 +10,7 @@ import sys
 import warnings
 import scipy.stats
 import math
+import os.path
 
 interval_probability_level = 0.95
 
@@ -131,7 +132,7 @@ def read_csv(filename):
                     value = row[field_name]
                     is_float = False
                     
-                    if unit == 'filename':
+                    if (unit == 'filename') and (value != ''):
                         assert(os.path.isfile(value))
                 elif unit == 'bool':
                     if row[field_name].lower() == 'true':
@@ -205,7 +206,7 @@ def test_read_csv():
         assert(len(df[key]) == 5)
     
     # Test that the correct number of cols is read.
-    assert(len(df.keys()) == 5)
+    assert(len(df.keys()) == 6)
     
     # Test that the correct units are read.
     assert(df['L'].check('[length]'))
@@ -215,8 +216,10 @@ def test_read_csv():
     assert(has_uncertainty(df['L']))
     assert(has_uncertainty(df['Re']))
     
-    # TODO: Check that str and filename columns are strings, and that the bool columns are bools.
+    # Check that str and filename columns are strings, and that the bool columns are bools.
     for value in df['classification']:
+        assert(isinstance(value, str))
+    for value in df['photo']:
         assert(isinstance(value, str))
     for value in df['screen']:
         assert(isinstance(value, bool))
@@ -227,8 +230,12 @@ def test_read_csv():
     assert(np.allclose(df['U'].magnitude, np.array([np.nan, 2, np.nan, 4, 7]), equal_nan=True))
     assert(df['screen'] == [False, False, True, True, False])
     assert(df['classification'] == ['A', 'B', 'C', 'A', 'C'])
+    assert(df['photo'] == ['', '', '', 'data/asset_hydraulic_1951_fig_10.jpg', ''])
     
-    # TODO: Check that filenames exist.
+    # Check that filenames exist.
+    for value in df['photo']:
+        if value != '':
+            assert(os.path.isfile(value))
 
 def all_close_ud(arr1, arr2):
     assert(has_uncertainty(arr1))
@@ -336,6 +343,4 @@ ureg.define('percent = 1e-2 frac = pct')
 ureg.define('ndm = []') # Non-DiMensional
 
 # TODO: Write wrapper functions so that you can switch out Pint and uncertainties later if you want to.
-# TODO: Add the ability to handle a bool column in the CSV file. For example: screen: true/false
-# TODO: Add the ability to handle a filename column in the CSV file. Check for the existence of the file.
 # TODO: Add docstrings.
