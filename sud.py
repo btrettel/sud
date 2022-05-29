@@ -330,49 +330,72 @@ def test_add_absolute_uncertainty():
         assert(math.isclose(number.std_dev, 0.1 / z))
 
 def create_table_query_start(table_name):
-    return 'CREATE TABLE '+table_name+' ('
+    data_query = 'CREATE TABLE '+table_name+' (\n'+table_name+'_id integer PRIMARY KEY,'
+    info_query = 'CREATE TABLE '+table_name+'_info (\n'+table_name+'_info_id integer PRIMARY KEY,'
+    
+    return [data_query, info_query]
 
-def create_table_query_column(column_name, datatype, primary_key=False, not_null=False, lower_bound=None, upper_bound=None, end=False):
+def create_table_query_column(create_queries, column_name, datatype, not_null=False, lower_bound=None, upper_bound=None, end=False):
     assert(datatype.lower() in {'integer', 'real', 'text'})
     
-    return_string = '\n'+column_name+' '+datatype
+    data_query = create_queries[0]
+    info_query = create_queries[1]
     
-    if primary_key:
-        return_string += ' PRIMARY KEY'
+    # construct data_query for mean
+    
+    data_query += '\n'+column_name+' '+datatype
     
     if not_null:
-        return_string += ' NOT NULL'
+        data_query += ' NOT NULL'
     
     if not(lower_bound is None) or not(upper_bound is None):
-        return_string += ' CHECK '
+        data_query += ' CHECK '
         if not(lower_bound is None) and not(upper_bound is None):
             # TODO: Assert that lower_bound and upper_bound are floats.
-            return_string += '(('+column_name+' > '+str(lower_bound)+') and ('+column_name+' < '+str(upper_bound)+'))'
+            data_query += '(('+column_name+' > '+str(lower_bound)+') and ('+column_name+' < '+str(upper_bound)+'))'
         elif not(lower_bound is None):
-            return_string += '('+column_name+' > '+str(lower_bound)+')'
+            data_query += '('+column_name+' > '+str(lower_bound)+')'
         elif not(upper_bound is None):
-            return_string += '('+column_name+' < '+str(upper_bound)+')'
+            data_query += '('+column_name+' < '+str(upper_bound)+')'
         else:
             raise ValueError("Invalid bounds?")
     
-    return_string += ','
+    data_query += ','
+    
+    # TODO: construct data_query for uncertainty
+    
+    # Only add uncertainties if variable is real.
+    if datatype == 'real':
+        data_query += '\n'+column_name+'_std_dev real'
+        
+        if not_null:
+            data_query += ' NOT NULL'
+        
+        data_query += ' CHECK ('+column_name+'_std_dev > 0)'
+        
+        data_query += ','
+    
+    # TODO: construct info_query
     
     if end:
-        return_string += '\n) STRICT;'
+        data_query += '\n) STRICT;'
+        info_query += '\n) STRICT;'
     
-    return return_string
+    return data_query, info_query
 
 def test_create_table_query():
-    create_query = create_table_query_start('jetbreakup')
-    create_query += create_table_query_column('id', 'integer', primary_key=True)
-    create_query += create_table_query_column('We_j0', 'real', not_null=True, lower_bound=0)
-    create_query += create_table_query_column('Re_j0', 'real', not_null=True, lower_bound=0, upper_bound=1e8)
-    create_query += create_table_query_column('Tubar_0', 'real', not_null=True, upper_bound=1, end=True)
+    create_queries = create_table_query_start('jetbreakup')
+    create_queries = create_table_query_column(create_queries, 'We_j0', 'real', not_null=True, lower_bound=0)
+    create_queries = create_table_query_column(create_queries, 'Re_j0', 'real', not_null=True, lower_bound=0, upper_bound=1e8)
+    create_queries = create_table_query_column(create_queries, 'Tubar_0', 'real', not_null=True, upper_bound=1, end=True)
     
-    assert(create_query.startswith('CREATE TABLE '))
-    assert(create_query.endswith(') STRICT;'))
-    assert('PRIMARY KEY' in create_query)
-    assert(create_query.count('(') == create_query.count(')'))
+    data_query = create_queries[0]
+    info_query = create_queries[1]
+    
+    assert(data_query.startswith('CREATE TABLE '))
+    assert(data_query.endswith(') STRICT;'))
+    assert('PRIMARY KEY' in data_query)
+    assert(data_query.count('(') == data_query.count(')'))
 
 # def create_db(filename):
     # try:
@@ -401,3 +424,14 @@ ureg.define('ndm = []') # Non-DiMensional
 # TODO: Add uncertainty columns. uncertainty >= 0
 # TODO: Add dimensions and LaTeX string to an info table.
 # TODO: Add covariance column. Constraint: <https://math.stackexchange.com/a/3830254>
+
+# create_queries = create_table_query_start('jetbreakup')
+# create_queries = create_table_query_column(create_queries, 'We_j0', 'real', not_null=True, lower_bound=0)
+# create_queries = create_table_query_column(create_queries, 'Re_j0', 'real', not_null=True, lower_bound=0, upper_bound=1e8)
+# create_queries = create_table_query_column(create_queries, 'Tubar_0', 'real', not_null=True, upper_bound=1, end=True)
+
+# data_query = create_queries[0]
+# info_query = create_queries[1]
+
+# print(data_query)
+# print(info_query)
