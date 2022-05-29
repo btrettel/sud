@@ -177,7 +177,7 @@ def read_csv(filename):
             z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
             for nominal, percent_uncertainty in zip(df[short_field_name_nominal], df[short_field_name]):
                 nominal_magnitude = nominal.magnitude
-                std_dev_magnitude = (percent_uncertainty.magnitude / 100.) / z
+                std_dev_magnitude = nominal.magnitude * (percent_uncertainty.magnitude / 100.) / z
                 arr = np.append(arr, ufloat(nominal_magnitude, std_dev_magnitude))
             
             df[short_field_name_nominal] = ureg.Quantity(arr, unit)
@@ -216,31 +216,33 @@ def test_read_csv():
     # TODO: Check that filenames exist.
 
 def all_close_ud(arr1, arr2):
-    # TODO: Add test for all_close_ud.
-    
     assert(has_uncertainty(arr1))
     assert(has_units(arr1))
     assert(has_uncertainty(arr2))
     assert(has_units(arr2))
     
     arr1_magnitude_nominal = []
-    arr2_magnitude_nominal = []
-    
     arr1_magnitude_std_dev = []
+    
+    for value1 in arr1:
+        number1 = value1.magnitude
+        arr1_magnitude_nominal = np.append(arr1_magnitude_nominal, [number1.nominal_value])
+        arr1_magnitude_std_dev = np.append(arr1_magnitude_std_dev, [number1.std_dev])
+    
+    arr2_magnitude_nominal = []
     arr2_magnitude_std_dev = []
     
-    for value in arr1:
-        number = value.magnitude
-        arr1_magnitude_nominal = np.append(arr1_magnitude_nominal, [number.nominal_value])
-        arr1_magnitude_std_dev = np.append(arr1_magnitude_std_dev, [number.std_dev])
+    for value2 in arr2:
+        number2 = value2.magnitude
+        arr2_magnitude_nominal = np.append(arr2_magnitude_nominal, [number2.nominal_value])
+        arr2_magnitude_std_dev = np.append(arr2_magnitude_std_dev, [number2.std_dev])
     
-    for value in arr2:
-        number = value.magnitude
-        arr2_magnitude_nominal = np.append(arr2_magnitude_nominal, [number.nominal_value])
-        arr2_magnitude_std_dev = np.append(arr2_magnitude_std_dev, [number.std_dev])
-    
-    return np.allclose(arr1_magnitude_nominal, arr2_magnitude_nominal, equal_nan=True)
-    return np.allclose(arr1_magnitude_std_dev, arr2_magnitude_std_dev, equal_nan=True)
+    return (np.allclose(arr1_magnitude_nominal, arr2_magnitude_nominal, equal_nan=True) and np.allclose(arr1_magnitude_std_dev, arr2_magnitude_std_dev, equal_nan=True))
+
+def test_all_close_ud():
+    assert(all_close_ud(ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm), ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm)))
+    assert(not(all_close_ud(ureg.Quantity(unumpy.uarray([0.2, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm), ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm))))
+    assert(not(all_close_ud(ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.1, 0.05, 0.05, 0.2, 0.2]), ureg.mm), ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm))))
 
 def add_percent_uncertainty(arr, percent):
     assert(not(has_uncertainty(arr)))
