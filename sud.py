@@ -357,12 +357,6 @@ def test_add_absolute_uncertainty():
         number = value.magnitude
         assert(math.isclose(number.std_dev, 0.1 / z))
 
-def create_table_query_start(table_name):
-    data_query = 'CREATE TABLE '+table_name+' (\n'+table_name+'_id integer PRIMARY KEY,'
-    info_query = 'CREATE TABLE '+table_name+'_info (\n'+table_name+'_info_id integer PRIMARY KEY,\nunits text NOT NULL,\nlatex text) STRICT;'
-    
-    return [data_query, info_query]
-
 def create_db(table_name):
     # TODO: After updating to SQlite 3.37.0 or later, add STRICT keyword. <https://www.sqlite.org/stricttables.html>
     
