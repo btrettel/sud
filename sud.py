@@ -12,7 +12,7 @@ import scipy.stats
 import math
 import os.path
 import json
-import textwrap
+import sqlite3
 
 interval_probability_level = 0.95
 z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
@@ -22,7 +22,9 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 def is_float(x):
-    assert(isinstance(x, str))
+    if isinstance(x, str):
+        return False
+    
     try:
         float(x)
         return True
@@ -30,8 +32,20 @@ def is_float(x):
         return False
 
 def test_is_float():
-    assert(is_float('1.1'))
+    assert(is_float(1.1))
     assert(not(is_float('a')))
+
+def str_is_float(x):
+    assert(isinstance(x, str))
+    try:
+        float(x)
+        return True
+    except:
+        return False
+
+def test_str_is_float():
+    assert(str_is_float('1.1'))
+    assert(not(str_is_float('a')))
 
 def has_uncertainty(x):
     # This will work for floats, arrays, and ndarrays.
@@ -349,104 +363,145 @@ def create_table_query_start(table_name):
     
     return [data_query, info_query]
 
-def create_table_query_column(create_queries, table_name, column_name, datatype, units, latex, not_null=False, lower_bound=None, upper_bound=None, end=False):
-    assert(datatype.lower() in {'integer', 'real', 'text'})
-    
-    data_query = create_queries[0]
-    info_query = create_queries[1]
-    
-    # construct data_query for mean
-    
-    data_query += '\n'+column_name+' '+datatype
-    
-    if not_null:
-        data_query += ' NOT NULL'
-    
-    if not(lower_bound is None) or not(upper_bound is None):
-        data_query += ' CHECK '
-        if not(lower_bound is None) and not(upper_bound is None):
-            # TODO: Assert that lower_bound and upper_bound are floats.
-            data_query += '(('+column_name+' > '+str(lower_bound)+') and ('+column_name+' < '+str(upper_bound)+'))'
-        elif not(lower_bound is None):
-            data_query += '('+column_name+' > '+str(lower_bound)+')'
-        elif not(upper_bound is None):
-            data_query += '('+column_name+' < '+str(upper_bound)+')'
-        else:
-            raise ValueError("Invalid bounds?")
-    
-    # construct data_query for uncertainty
-    
-    # Only add uncertainties if variable is real.
-    if datatype == 'real':
-        data_query += '\n'+column_name+'_std_dev real'
-        
-        if not_null:
-            data_query += ' NOT NULL'
-        
-        data_query += ' CHECK ('+column_name+'_std_dev > 0)'
-        
-        data_query += ','
-    
-    # construct info_query
-    # TODO: add text description of each variable
-    
-    info_query += '\nINSERT INTO '+table_name+'_info (units, latex) VALUES("'+units+'", "'+latex+'");'
-    
-    if end:
-        data_query += '\n) STRICT;'
-    else:
-        data_query += ','
-    
-    return [data_query, info_query]
-
-# def test_create_table_query():
-    # create_queries = create_table_query_start('jetbreakup')
-    # create_queries = create_table_query_column(create_queries, 'jetbreakup', 'We_j0', 'real', '[]', r'$\text{We}_{\text{j}0}$', not_null=True, lower_bound=0)
-    # create_queries = create_table_query_column(create_queries, 'jetbreakup', 'Re_j0', 'real', '[]', r'$\text{Re}_{\text{j}0}$', not_null=True, lower_bound=0, upper_bound=1e8)
-    # create_queries = create_table_query_column(create_queries, 'jetbreakup', 'Tubar_0', 'real', '[]', r'$\overline{\text{Tu}}_0$', not_null=True, upper_bound=1, end=True)
-    
-    # data_query = create_queries[0]
-    # info_query = create_queries[1]
-    
-    # assert(data_query.startswith('CREATE TABLE '))
-    # assert(data_query.endswith(') STRICT;'))
-    # assert('PRIMARY KEY' in data_query)
-    # assert(data_query.count('(') == data_query.count(')'))
-    
-    # assert(info_query.count('(') == info_query.count(')'))
-
 def create_db(table_name):
-    data_create_query = """CREATE TABLE ? (
-                        ? integer PRIMARY KEY,"""
-    data_create_params = (table_name, table_name+'_id')
+    # TODO: After updating to SQlite 3.37.0 or later, add STRICT keyword. <https://www.sqlite.org/stricttables.html>
     
-    info_create_query = """CREATE TABLE ? (
-                        ? integer PRIMARY KEY,
-                        units text NOT NULL,
-                        latex text,
-                        description text) STRICT;"""
-    id_create_params = (table_name, table_name+'_info_id')
+    assert(len(table_name) < 24)
     
-    info_insert_query = ''
-    info_insert_params = ()
+    data_create_query = f"CREATE TABLE {table_name} (\n{table_name}_id integer PRIMARY KEY,"
+    
+    info_create_query = f"CREATE TABLE {table_name}_info (\n{table_name}_info_id integer PRIMARY KEY,\nunits text NOT NULL,\nlatex text,\ndescription text);"
+    
+    info_insert_queries    = []
+    info_insert_params_arr = []
     
     with open('data/'+table_name+'.json') as f:
         data = json.load(f)
         
         for variable in data['variables']:
+            assert('column_name' in variable.keys())
             print("Reading variable:", variable['column_name'])
             
-            assert(variable['datatype'].lower() in {'integer', 'real', 'text'})
+            # Data validation
             
-            #data_create_query += 
+            assert('datatype' in variable.keys())
+            assert('units' in variable.keys())
+            assert('latex' in variable.keys())
+            assert('description' in variable.keys())
+            
+            assert(variable['datatype'] in {'integer', 'real', 'text'})
+            
+            assert(len(variable['units']) > 0)
+            assert(len(variable['description']) > 0)
+            
+            if 'lower_bound' in variable.keys():
+                # If lower_bound defined, then datatype must be real.
+                assert(variable['datatype'] == 'real')
+                
+                # If lower_bound defined, then the number must be a float.
+                assert(is_float(variable['lower_bound']))
+            
+            if 'upper_bound' in variable.keys():
+                # If upper_bound defined, then datatype must be real.
+                assert(variable['datatype'] == 'real')
+                
+                # If upper_bound defined, then the number must be a float.
+                assert(is_float(variable['upper_bound']))
+                
+                # If both upper and lower bounds are present, check that the lower is lower than the upper.
+                if 'lower_bound' in variable.keys():
+                    assert(variable['lower_bound'] < variable['upper_bound'])
+            
+            if 'not_null' in variable.keys():
+                assert(isinstance(variable['not_null'], bool))
+            else:
+                variable['not_null'] = False
+            
+            # construct the query
+            
+            data_create_query += f"\n{variable['column_name']} {variable['datatype']}"
+            
+            if variable['not_null']:
+                data_create_query += " NOT NULL"
+            
+            if ('lower_bound' in variable.keys()) or ('upper_bound' in variable.keys()):
+                data_create_query += ' CHECK '
+                if ('lower_bound' in variable.keys()) and ('upper_bound' in variable.keys()):
+                    data_create_query += f"(({variable['column_name']} > {variable['lower_bound']}) and ({variable['column_name']} < {variable['upper_bound']}))"
+                elif ('lower_bound' in variable.keys()):
+                    data_create_query += f"({variable['column_name']} > {variable['lower_bound']})"
+                elif ('upper_bound' in variable.keys()):
+                    data_create_query += f"({variable['column_name']} < {variable['upper_bound']})"
+                else:
+                    raise ValueError("Invalid bounds? This should be impossible.")
+            
+            data_create_query += ","
+            
+            # Only add uncertainties if variable is real.
+            if variable['datatype'] == 'real':
+                data_create_query += f"\n{variable['column_name']}_std_dev real"
+                
+                if variable['not_null']:
+                    data_create_query += " NOT NULL"
+                
+                data_create_query += f" CHECK ({variable['column_name']}_std_dev > 0)"
+                
+                data_create_query += ','
+            
+            info_insert_queries.append(f"INSERT INTO {table_name}_info (units, latex, description) VALUES(?, ?, ?);")
+            info_insert_params_arr.append((variable['units'], variable['latex'], variable['description']))
     
-    # try:
-        # con = sqlite3.connect(db_file)
-    # except Error as e:
-        # eprint(e)
-        # exit(-1)
+    data_create_query = data_create_query[:-1]
     
-    # c = con.cursor()
+    data_create_query += "\n);"
+    #data_create_query += "\n) STRICT;"
+    
+    assert(not('variable[' in data_create_query))
+    assert(not('variable[' in info_create_query))
+    
+    assert(data_create_query.startswith('CREATE TABLE '))
+    assert(data_create_query.endswith(');'))
+    #assert(data_create_query.endswith(') STRICT;'))
+    assert('PRIMARY KEY' in data_create_query)
+    assert(data_create_query.count('(') == data_create_query.count(')'))
+    
+    assert(info_create_query.startswith('CREATE TABLE '))
+    assert(info_create_query.endswith(');'))
+    #assert(info_create_query.endswith(') STRICT;'))
+    assert('PRIMARY KEY' in info_create_query)
+    assert(info_create_query.count('(') == info_create_query.count(')'))
+    
+    # Assert that number of question marks equals length of params.
+    for info_insert_query, info_insert_params in zip(info_insert_queries, info_insert_params_arr):
+        assert(info_insert_query.count('?') == len(info_insert_params))
+    
+    db_file = f"data/{table_name}.sqlite"
+    
+    try:
+        if os.path.exists(db_file):
+           os.remove(db_file)
+        con = sqlite3.connect(db_file)
+    except Error as e:
+        eprint(e)
+        exit(-1)
+    
+    c = con.cursor()
+    
+    print(data_create_query)
+    c.execute(data_create_query)
+    
+    print(info_create_query)
+    c.execute(info_create_query)
+    
+    print(info_insert_queries)
+    print(info_insert_params_arr)
+    for info_insert_query, info_insert_params in zip(info_insert_queries, info_insert_params_arr):
+        c.execute(info_insert_query, info_insert_params)
+    
+    con.commit()
+    #con.close()
+    
+    return con
 
 # Configure Pint
 
@@ -464,6 +519,7 @@ ureg.define('ndm = []') # Non-DiMensional
 # TODO: Write wrapper functions so that you can switch out Pint and uncertainties later if you want to.
 # TODO: Add docstrings.
 # TODO: Add covariance column. Constraint: <https://math.stackexchange.com/a/3830254>
-# TODO: Make database scheme in a JSON file that is read in, creating the queries.
 
-create_db('test')
+con = create_db('test')
+
+con.close()
