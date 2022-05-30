@@ -1,32 +1,46 @@
 {
     "variables": [
         {
-            "variable": "We_j0",
-            "datatype": "real",
-            "units": "[]",
-            "latex": "$\\mathrm{We}_{\\text{j}0}$",
-            "description": "jet Weber number",
+            "variable": "L",
+            "datatype": "float",
+            "units": "mm",
+            "latex": "$L$",
+            "description": "length of thingamajig",
             "not_null": true,
             "lower_bound": 0
         },
         {
-            "variable": "Re_j0",
-            "datatype": "real",
+            "variable": "Re",
+            "datatype": "float",
             "units": "[]",
-            "latex": "$\\mathrm{Re}_{\\text{j}0}$",
-            "description": "jet Reynolds number",
+            "latex": "$\\mathrm{Re}$",
+            "description": "Reynolds number",
             "not_null": true,
             "lower_bound": 0,
-            "upper_bound": 1e8
+            "upper_bound": 1e6
         },
         {
-            "variable": "Tubar_0",
-            "datatype": "real",
+            "variable": "U",
+            "datatype": "float",
+            "units": "meter/second",
+            "latex": "$U$",
+            "description": "velocity of thingamajig",
+            "upper_bound": 10
+        },
+        {
+            "variable": "screen",
+            "datatype": "bool",
             "units": "[]",
-            "latex": "$\\overline{\\mathrm{Tu}}_0$",
-            "description": "jet plane-averaged turbulence intensity",
-            "not_null": true,
-            "upper_bound": 1
+            "latex": "screen",
+            "description": "whether a screen was present"
+        },
+        {
+            "variable": "classification",
+            "datatype": "str",
+            "units": "[]",
+            "latex": "classification",
+            "description": "how the data is classified",
+            "set": ["A", "B", "C"]
         }
     ]
 }

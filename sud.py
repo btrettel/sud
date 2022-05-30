@@ -383,7 +383,14 @@ def create_db(table_name):
             assert('latex' in variable.keys())
             assert('description' in variable.keys())
             
-            assert(variable['datatype'] in {'integer', 'real', 'text'})
+            assert(variable['datatype'] in {'int', 'float', 'str', 'bool'})
+            
+            if variable['datatype'] == 'float':
+                variable['datatype'] = 'real'
+            elif variable['datatype'] == 'str':
+                variable['datatype'] = 'text'
+            elif variable['datatype'] == 'bool':
+                variable['datatype'] = 'int'
             
             assert(len(variable['units']) > 0)
             assert(len(variable['description']) > 0)
@@ -497,6 +504,26 @@ def create_db(table_name):
     
     return con
 
+def add_data(con): #, df):
+    # TODO: Check that all variables in the database are present in the dataframe.
+    
+    c = con.cursor()
+    
+    # Get a list of all variables available.
+    
+    variables = []
+    c.execute("select * from sqlite_master;")
+    query_result = c.fetchall()
+    assert(len(query_result) == 2)
+    table_name = query_result[0][1]
+    c.execute(f"pragma table_info({table_name});")
+    query_result = c.fetchall()
+    for info in query_result:
+        if not(info[1].endswith('_std_dev')) and not(info[1].endswith(f"{table_name}_id")):
+            variables.append(info[1])
+    
+    print(variables)
+
 # Configure Pint
 
 ureg = pint.UnitRegistry(system='mks',  auto_reduce_dimensions=True)
@@ -513,7 +540,12 @@ ureg.define('ndm = []') # Non-DiMensional
 # TODO: Write wrapper functions so that you can switch out Pint and uncertainties later if you want to.
 # TODO: Add docstrings.
 # TODO: Add covariance column. Constraint: <https://math.stackexchange.com/a/3830254>
+# TODO: Recognize boolean variables even though they are stored as integers in the database. Convert them to booleans when reading.
+# TODO: For string data, check against set from JSON file.
+# TODO: No units required for non-real?
 
 con = create_db('test')
+
+add_data(con)
 
 con.close()
