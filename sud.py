@@ -379,8 +379,8 @@ def create_db(table_name):
         data = json.load(f)
         
         for variable in data['variables']:
-            assert('column_name' in variable.keys())
-            print("Reading variable:", variable['column_name'])
+            assert('variable' in variable.keys())
+            print("Reading variable:", variable['variable'])
             
             # Data validation
             
@@ -419,7 +419,7 @@ def create_db(table_name):
             
             # construct the query
             
-            data_create_query += f"\n{variable['column_name']} {variable['datatype']}"
+            data_create_query += f"\n{variable['variable']} {variable['datatype']}"
             
             if variable['not_null']:
                 data_create_query += " NOT NULL"
@@ -427,11 +427,11 @@ def create_db(table_name):
             if ('lower_bound' in variable.keys()) or ('upper_bound' in variable.keys()):
                 data_create_query += ' CHECK '
                 if ('lower_bound' in variable.keys()) and ('upper_bound' in variable.keys()):
-                    data_create_query += f"(({variable['column_name']} > {variable['lower_bound']}) and ({variable['column_name']} < {variable['upper_bound']}))"
+                    data_create_query += f"(({variable['variable']} > {variable['lower_bound']}) and ({variable['variable']} < {variable['upper_bound']}))"
                 elif ('lower_bound' in variable.keys()):
-                    data_create_query += f"({variable['column_name']} > {variable['lower_bound']})"
+                    data_create_query += f"({variable['variable']} > {variable['lower_bound']})"
                 elif ('upper_bound' in variable.keys()):
-                    data_create_query += f"({variable['column_name']} < {variable['upper_bound']})"
+                    data_create_query += f"({variable['variable']} < {variable['upper_bound']})"
                 else:
                     raise ValueError("Invalid bounds? This should be impossible.")
             
@@ -439,12 +439,12 @@ def create_db(table_name):
             
             # Only add uncertainties if variable is real.
             if variable['datatype'] == 'real':
-                data_create_query += f"\n{variable['column_name']}_std_dev real"
+                data_create_query += f"\n{variable['variable']}_std_dev real"
                 
                 if variable['not_null']:
                     data_create_query += " NOT NULL"
                 
-                data_create_query += f" CHECK ({variable['column_name']}_std_dev > 0)"
+                data_create_query += f" CHECK ({variable['variable']}_std_dev > 0)"
                 
                 data_create_query += ','
             
