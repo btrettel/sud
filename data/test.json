@@ -1,0 +1,32 @@
+{
+    "variables": [
+        {
+            "column_name": "We_j0",
+            "datatype": "real",
+            "units": "[]",
+            "latex": "$\\mathrm{We}_{\\text{j}0}$",
+            "description": "jet Weber number",
+            "not_null": true,
+            "lower_bound": 0
+        },
+        {
+            "column_name": "Re_j0",
+            "datatype": "real",
+            "units": "[]",
+            "latex": "$\\mathrm{Re}_{\\text{j}0}$",
+            "description": "jet Reynolds number",
+            "not_null": true,
+            "lower_bound": 0,
+            "upper_bound": 1e8
+        },
+        {
+            "column_name": "Tubar_0",
+            "datatype": "real",
+            "units": "[]",
+            "latex": "$\\overline{\\mathrm{Tu}}_0$",
+            "description": "jet plane-averaged turbulence intensity",
+            "not_null": true,
+            "upper_bound": 1
+        }
+    ]
+}

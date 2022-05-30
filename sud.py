@@ -11,6 +11,8 @@ import warnings
 import scipy.stats
 import math
 import os.path
+import json
+import textwrap
 
 interval_probability_level = 0.95
 z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
@@ -18,6 +20,18 @@ z = scipy.stats.norm.ppf(1 - (1 - interval_probability_level) / 2)
 # <https://stackoverflow.com/a/14981125/1124489>
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+
+def is_float(x):
+    assert(isinstance(x, str))
+    try:
+        float(x)
+        return True
+    except:
+        return False
+
+def test_is_float():
+    assert(is_float('1.1'))
+    assert(not(is_float('a')))
 
 def has_uncertainty(x):
     # This will work for floats, arrays, and ndarrays.
@@ -135,7 +149,7 @@ def read_csv(filename):
             for field_name, short_field_name, unit in zip(field_names, short_field_names, units):
                 if (unit == 'str') or (unit == 'filename'):
                     value = row[field_name]
-                    is_float = False
+                    var_is_float = False
                     
                     if (unit == 'filename') and (value != ''):
                         assert(os.path.isfile(value))
@@ -147,22 +161,22 @@ def read_csv(filename):
                     else:
                         raise ValueError("Invalid boolean:", row[field_name])
                     
-                    is_float = False
+                    var_is_float = False
                 else:
                     if row[field_name] == '':
                         value = np.nan
                     else:
                         value = float(row[field_name])
                     
-                    is_float = True
+                    var_is_float = True
                 
                 if short_field_name in df:
-                    if is_float:
+                    if var_is_float:
                         df[short_field_name] = np.append(df[short_field_name], [value])
                     else:
                         df[short_field_name].append(value)
                 else:
-                    if is_float:
+                    if var_is_float:
                         df[short_field_name] = np.array([value])
                     else:
                         df[short_field_name] = [value]
@@ -331,11 +345,11 @@ def test_add_absolute_uncertainty():
 
 def create_table_query_start(table_name):
     data_query = 'CREATE TABLE '+table_name+' (\n'+table_name+'_id integer PRIMARY KEY,'
-    info_query = 'CREATE TABLE '+table_name+'_info (\n'+table_name+'_info_id integer PRIMARY KEY,'
+    info_query = 'CREATE TABLE '+table_name+'_info (\n'+table_name+'_info_id integer PRIMARY KEY,\nunits text NOT NULL,\nlatex text) STRICT;'
     
     return [data_query, info_query]
 
-def create_table_query_column(create_queries, column_name, datatype, not_null=False, lower_bound=None, upper_bound=None, end=False):
+def create_table_query_column(create_queries, table_name, column_name, datatype, units, latex, not_null=False, lower_bound=None, upper_bound=None, end=False):
     assert(datatype.lower() in {'integer', 'real', 'text'})
     
     data_query = create_queries[0]
@@ -360,9 +374,7 @@ def create_table_query_column(create_queries, column_name, datatype, not_null=Fa
         else:
             raise ValueError("Invalid bounds?")
     
-    data_query += ','
-    
-    # TODO: construct data_query for uncertainty
+    # construct data_query for uncertainty
     
     # Only add uncertainties if variable is real.
     if datatype == 'real':
@@ -375,29 +387,59 @@ def create_table_query_column(create_queries, column_name, datatype, not_null=Fa
         
         data_query += ','
     
-    # TODO: construct info_query
+    # construct info_query
+    # TODO: add text description of each variable
+    
+    info_query += '\nINSERT INTO '+table_name+'_info (units, latex) VALUES("'+units+'", "'+latex+'");'
     
     if end:
         data_query += '\n) STRICT;'
-        info_query += '\n) STRICT;'
+    else:
+        data_query += ','
     
-    return data_query, info_query
+    return [data_query, info_query]
 
-def test_create_table_query():
-    create_queries = create_table_query_start('jetbreakup')
-    create_queries = create_table_query_column(create_queries, 'We_j0', 'real', not_null=True, lower_bound=0)
-    create_queries = create_table_query_column(create_queries, 'Re_j0', 'real', not_null=True, lower_bound=0, upper_bound=1e8)
-    create_queries = create_table_query_column(create_queries, 'Tubar_0', 'real', not_null=True, upper_bound=1, end=True)
+# def test_create_table_query():
+    # create_queries = create_table_query_start('jetbreakup')
+    # create_queries = create_table_query_column(create_queries, 'jetbreakup', 'We_j0', 'real', '[]', r'$\text{We}_{\text{j}0}$', not_null=True, lower_bound=0)
+    # create_queries = create_table_query_column(create_queries, 'jetbreakup', 'Re_j0', 'real', '[]', r'$\text{Re}_{\text{j}0}$', not_null=True, lower_bound=0, upper_bound=1e8)
+    # create_queries = create_table_query_column(create_queries, 'jetbreakup', 'Tubar_0', 'real', '[]', r'$\overline{\text{Tu}}_0$', not_null=True, upper_bound=1, end=True)
     
-    data_query = create_queries[0]
-    info_query = create_queries[1]
+    # data_query = create_queries[0]
+    # info_query = create_queries[1]
     
-    assert(data_query.startswith('CREATE TABLE '))
-    assert(data_query.endswith(') STRICT;'))
-    assert('PRIMARY KEY' in data_query)
-    assert(data_query.count('(') == data_query.count(')'))
+    # assert(data_query.startswith('CREATE TABLE '))
+    # assert(data_query.endswith(') STRICT;'))
+    # assert('PRIMARY KEY' in data_query)
+    # assert(data_query.count('(') == data_query.count(')'))
+    
+    # assert(info_query.count('(') == info_query.count(')'))
 
-# def create_db(filename):
+def create_db(table_name):
+    data_create_query = """CREATE TABLE ? (
+                        ? integer PRIMARY KEY,"""
+    data_create_params = (table_name, table_name+'_id')
+    
+    info_create_query = """CREATE TABLE ? (
+                        ? integer PRIMARY KEY,
+                        units text NOT NULL,
+                        latex text,
+                        description text) STRICT;"""
+    id_create_params = (table_name, table_name+'_info_id')
+    
+    info_insert_query = ''
+    info_insert_params = ()
+    
+    with open('data/'+table_name+'.json') as f:
+        data = json.load(f)
+        
+        for variable in data['variables']:
+            print("Reading variable:", variable['column_name'])
+            
+            assert(variable['datatype'].lower() in {'integer', 'real', 'text'})
+            
+            #data_create_query += 
+    
     # try:
         # con = sqlite3.connect(db_file)
     # except Error as e:
@@ -421,17 +463,7 @@ ureg.define('ndm = []') # Non-DiMensional
 
 # TODO: Write wrapper functions so that you can switch out Pint and uncertainties later if you want to.
 # TODO: Add docstrings.
-# TODO: Add uncertainty columns. uncertainty >= 0
-# TODO: Add dimensions and LaTeX string to an info table.
 # TODO: Add covariance column. Constraint: <https://math.stackexchange.com/a/3830254>
+# TODO: Make database scheme in a JSON file that is read in, creating the queries.
 
-# create_queries = create_table_query_start('jetbreakup')
-# create_queries = create_table_query_column(create_queries, 'We_j0', 'real', not_null=True, lower_bound=0)
-# create_queries = create_table_query_column(create_queries, 'Re_j0', 'real', not_null=True, lower_bound=0, upper_bound=1e8)
-# create_queries = create_table_query_column(create_queries, 'Tubar_0', 'real', not_null=True, upper_bound=1, end=True)
-
-# data_query = create_queries[0]
-# info_query = create_queries[1]
-
-# print(data_query)
-# print(info_query)
+create_db('test')

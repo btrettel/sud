@@ -8,8 +8,6 @@
 - pytest
 - Function to update Sqlite database with mean and standard deviation that checks that the units are as expected.
 - Mandatory uncertainty column
-- schema table listing units of each column, TeX code for variable, text description of each ==> read in from a CSV file before creating database?
-- Schema CSV file also has optional database constraint information: lower bound, upper bound
 - <https://software-carpentry.org/blog/2013/05/reuse-your-data.html>
 - output stored in a single file with revision number, whether code was modified
 - Use sets of fake data for testing purposes.
