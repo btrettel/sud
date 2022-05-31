@@ -48,7 +48,10 @@ def test_str_is_float():
     assert(not(str_is_float('a')))
 
 def has_uncertainty(x):
-    # This will work for floats, arrays, and ndarrays.
+    # This will work for floats, arrays, ndarrays, strs, and bools.
+    
+    if isinstance(x, str) or isinstance(x, bool):
+        return False
     
     try:
         # assume that this is an array or ndarray at first
@@ -100,9 +103,18 @@ def test_has_uncertainty():
     # ndarray with units with uncertainty
     x = ureg.Quantity(unumpy.uarray([1, 2], [0.01, 0.002]), ureg.meter)
     assert(has_uncertainty(x))
+    
+    # string
+    assert(not(has_uncertainty('test')))
+    
+    # bool
+    assert(not(has_uncertainty(True)))
 
 def has_units(x):
-    # This will work for floats, arrays, and ndarrays.
+    # This will work for floats, arrays, ndarrays, strs, and bools.
+    
+    if isinstance(x, str) or isinstance(x, bool):
+        return False
     
     try:
         # assume that this is an array or ndarray at first
@@ -307,7 +319,10 @@ def add_percent_uncertainty(arr, percent):
     multiplier = (percent / 100.) / z
     for value in arr:
         number = value.magnitude
-        return_arr = np.append(return_arr, ufloat(number, number * multiplier))
+        if np.isnan(number):
+            return_arr = np.append(return_arr, ufloat(number, np.nan))
+        else:
+            return_arr = np.append(return_arr, ufloat(number, number * multiplier))
     
     return_arr = ureg.Quantity(return_arr, arr.units)
     
@@ -337,7 +352,10 @@ def add_absolute_uncertainty(arr, uncertainty):
     uncertainty_magnitude = uncertainty.magnitude / z
     for value in arr:
         number = value.magnitude
-        return_arr = np.append(return_arr, ufloat(number, uncertainty_magnitude))
+        if np.isnan(number):
+            return_arr = np.append(return_arr, ufloat(number, np.nan))
+        else:
+            return_arr = np.append(return_arr, ufloat(number, uncertainty_magnitude))
     
     return_arr = ureg.Quantity(return_arr, arr.units)
     
@@ -364,7 +382,7 @@ def create_db(table_name):
     
     data_create_query = f"CREATE TABLE {table_name} (\n{table_name}_id integer PRIMARY KEY,"
     
-    info_create_query = f"CREATE TABLE {table_name}_info (\n{table_name}_info_id integer PRIMARY KEY,\nvariable text NOT NULL,\nunits text NOT NULL,\nlatex text,\ndescription text);"
+    info_create_query = f"CREATE TABLE {table_name}_info (\n{table_name}_info_id integer PRIMARY KEY,\nvariable text NOT NULL,\nunits text NOT NULL,\nlatex text,\ndescription text NOT NULL);"
     
     info_insert_queries    = []
     info_insert_params_arr = []
@@ -379,7 +397,6 @@ def create_db(table_name):
             # Data validation
             
             assert('datatype' in variable.keys())
-            assert('latex' in variable.keys())
             assert('description' in variable.keys())
             
             assert(variable['datatype'] in {'int', 'float', 'str', 'bool'})
@@ -388,9 +405,13 @@ def create_db(table_name):
                 variable['datatype'] = 'real'
                 assert('units' in variable.keys())
                 assert(len(variable['units']) > 0)
+                assert('latex' in variable.keys())
+                assert(len(variable['latex']) > 0)
             elif variable['datatype'] == 'int':
                 assert('units' in variable.keys())
                 assert(len(variable['units']) > 0)
+                assert('latex' in variable.keys())
+                assert(len(variable['latex']) > 0)
             
             if (variable['datatype'] == 'str') or (variable['datatype'] == 'bool'):
                 assert(not('units' in variable.keys()))
@@ -464,8 +485,12 @@ def create_db(table_name):
                 
                 data_create_query += ','
             
-            info_insert_queries.append(f"INSERT INTO {table_name}_info (variable, units, latex, description) VALUES(?, ?, ?, ?);")
-            info_insert_params_arr.append((variable['variable'], variable['units'], variable['latex'], variable['description']))
+            if 'latex' in variable.keys():
+                info_insert_queries.append(f"INSERT INTO {table_name}_info (variable, units, latex, description) VALUES(?, ?, ?, ?);")
+                info_insert_params_arr.append((variable['variable'], variable['units'], variable['latex'], variable['description']))
+            else:
+                info_insert_queries.append(f"INSERT INTO {table_name}_info (variable, units, description) VALUES(?, ?, ?);")
+                info_insert_params_arr.append((variable['variable'], variable['units'], variable['description']))
     
     data_create_query = data_create_query[:-1]
     
@@ -519,9 +544,7 @@ def create_db(table_name):
     
     return con
 
-def add_data(con): #, df):
-    # TODO: Check that all variables in the database are present in the dataframe.
-    
+def add_data(con, df):
     c = con.cursor()
     
     # Get a list of all variables available.
@@ -537,7 +560,66 @@ def add_data(con): #, df):
         if not(info[1].endswith('_std_dev')) and not(info[1].endswith(f"{table_name}_id")):
             variables.append(info[1])
     
-    print(variables)
+    # Check that all variables in the database are present in the dataframe.
+    for variable in df.keys():
+        assert(variable in variables)
+    
+    # Add data to database.
+    rows = len(df[list(df.keys())[0]])
+    for i in range(rows):
+        insert_query = f"INSERT INTO {table_name} ("
+        insert_params = ()
+        
+        for variable in df.keys():
+            insert_query += f"{variable}, "
+            #print(variable, df[variable][i])
+            
+            if has_units(df[variable][i]):
+                variable_magnitude = df[variable][i].magnitude
+                
+                # TODO: Check that units match.
+                
+                if has_uncertainty(df[variable][i]):
+                    # For variables with uncertainty, split into mean and std_dev and insert both.
+                    variable_nominal = variable_magnitude.nominal_value
+                    variable_std_dev = variable_magnitude.std_dev
+                    
+                    if np.isnan(variable_nominal):
+                        variable_nominal = None
+                    
+                    if np.isnan(variable_std_dev):
+                        variable_std_dev = None
+                    
+                    insert_query += f"{variable}_std_dev, "
+                    insert_params += (variable_nominal, variable_std_dev)
+                else:
+                    insert_params += (variable_magnitude,)
+            else:
+                if isinstance(df[variable][i], str):
+                    variable = df[variable][i]
+                    
+                    if variable == '':
+                        variable = None
+                    
+                    # TODO: For string data, check against set from JSON file when adding to database.
+                else:
+                    variable = df[variable][i]
+                
+                insert_params += (variable,)
+        
+        insert_query = insert_query[:-2] + ") VALUES("
+        
+        # Add the appropriate number of question marks to parameterize the query.
+        for param in insert_params:
+            insert_query += '?, '
+        
+        insert_query = insert_query[:-2] + ");"
+        
+        assert(insert_query.count('?') == len(insert_params))
+        
+        print(insert_query)
+        print(insert_params)
+        c.execute(insert_query, insert_params)
 
 # Configure Pint
 
@@ -556,11 +638,15 @@ ureg.define('ndm = []') # Non-DiMensional
 # TODO: Add docstrings.
 # TODO: Add covariance column. Constraint: <https://math.stackexchange.com/a/3830254>
 # TODO: Recognize boolean variables even though they are stored as integers in the database. Convert them to booleans when reading.
-# TODO: For string data, check against set from JSON file.
-# TODO: No units required for non-real?
+# TODO: For variables which can be null, if there is a mean, require a std_dev too. Sqlite by itself will not be able to enforce that.
+# TODO: Add tests for add_percent_uncertainty and add_absolute_uncertainty where the ndarray has nans.
 
 con = create_db('test')
 
-add_data(con)
+df = read_csv('data/test.csv')
+
+df['U'] = add_absolute_uncertainty(df['U'], 0.1 * ureg.meter / ureg.second)
+
+add_data(con, df)
 
 con.close()

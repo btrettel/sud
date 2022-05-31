@@ -30,15 +30,18 @@
         {
             "variable": "screen",
             "datatype": "bool",
-            "latex": "screen",
             "description": "whether a screen was present"
         },
         {
             "variable": "classification",
             "datatype": "str",
-            "latex": "classification",
             "description": "how the data is classified",
             "set": ["A", "B", "C"]
+        },
+        {
+            "variable": "photo",
+            "datatype": "str",
+            "description": "a photo of the experimental condition"
         }
     ]
 }
