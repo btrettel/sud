@@ -364,7 +364,7 @@ def create_db(table_name):
     
     data_create_query = f"CREATE TABLE {table_name} (\n{table_name}_id integer PRIMARY KEY,"
     
-    info_create_query = f"CREATE TABLE {table_name}_info (\n{table_name}_info_id integer PRIMARY KEY,\nunits text NOT NULL,\nlatex text,\ndescription text);"
+    info_create_query = f"CREATE TABLE {table_name}_info (\n{table_name}_info_id integer PRIMARY KEY,\nvariable text NOT NULL,\nunits text NOT NULL,\nlatex text,\ndescription text);"
     
     info_insert_queries    = []
     info_insert_params_arr = []
@@ -379,7 +379,6 @@ def create_db(table_name):
             # Data validation
             
             assert('datatype' in variable.keys())
-            assert('units' in variable.keys())
             assert('latex' in variable.keys())
             assert('description' in variable.keys())
             
@@ -387,12 +386,28 @@ def create_db(table_name):
             
             if variable['datatype'] == 'float':
                 variable['datatype'] = 'real'
-            elif variable['datatype'] == 'str':
+                assert('units' in variable.keys())
+                assert(len(variable['units']) > 0)
+            elif variable['datatype'] == 'int':
+                assert('units' in variable.keys())
+                assert(len(variable['units']) > 0)
+            
+            if (variable['datatype'] == 'str') or (variable['datatype'] == 'bool'):
+                assert(not('units' in variable.keys()))
+            
+            if not('units' in variable.keys()):
+                if variable['datatype'] == 'str':
+                    variable['units'] = 'str'
+                elif variable['datatype'] == 'bool':
+                    variable['units'] = 'bool'
+            
+            assert('units' in variable.keys())
+            
+            if variable['datatype'] == 'str':
                 variable['datatype'] = 'text'
             elif variable['datatype'] == 'bool':
                 variable['datatype'] = 'int'
             
-            assert(len(variable['units']) > 0)
             assert(len(variable['description']) > 0)
             
             if 'lower_bound' in variable.keys():
@@ -449,8 +464,8 @@ def create_db(table_name):
                 
                 data_create_query += ','
             
-            info_insert_queries.append(f"INSERT INTO {table_name}_info (units, latex, description) VALUES(?, ?, ?);")
-            info_insert_params_arr.append((variable['units'], variable['latex'], variable['description']))
+            info_insert_queries.append(f"INSERT INTO {table_name}_info (variable, units, latex, description) VALUES(?, ?, ?, ?);")
+            info_insert_params_arr.append((variable['variable'], variable['units'], variable['latex'], variable['description']))
     
     data_create_query = data_create_query[:-1]
     

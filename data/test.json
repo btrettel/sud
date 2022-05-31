@@ -30,14 +30,12 @@
         {
             "variable": "screen",
             "datatype": "bool",
-            "units": "[]",
             "latex": "screen",
             "description": "whether a screen was present"
         },
         {
             "variable": "classification",
             "datatype": "str",
-            "units": "[]",
             "latex": "classification",
             "description": "how the data is classified",
             "set": ["A", "B", "C"]
