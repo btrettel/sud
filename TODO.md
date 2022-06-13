@@ -1,18 +1,25 @@
-- Sqlite
-   - [CHECK constraints](https://www.sqlite.org/lang_createtable.html#check_constraints) (bounds)
-   - [NOT NULL constaints](https://www.sqlite.org/lang_createtable.html#not_null_constraints)
-   - [STRICT keyword](https://www.sqlite.org/draft/stricttables.html); [also see](https://news.ycombinator.com/item?id=28259104)
-- [uncertainties](https://github.com/lebigot/uncertainties)
-- [pint](https://github.com/hgrecco/pint)
+- TODO: create {variable}_page_fig and {variable}_transcription_method for variables where related_variables = True. Set for transcription methods: "set": ["table", "figure", "spreadsheet"].
+- follow PEP 8 / pylint
+- Add second argument to assert to give more context about why the assertion exists.
+- Check that LaTeX in the JSON file is properly escaped.
+- Add docstrings.
+- Add covariance column. Constraint: <https://math.stackexchange.com/a/3830254>
+- Recognize boolean variables even though they are stored as integers in the database. Convert them to booleans when reading.
+- Add tests for add_percent_uncertainty and add_absolute_uncertainty where the ndarray has nans.
+- Try to load faulty data (out of bounds, etc.) to check if the assertions, database constraints, etc., work.
+- Test that the database is as expected after loading the test data.
+- Add new column to the database for the file that the data originally came from.
+- Have a function to more easily check if certain numbers are identical. E.g., use to check consistency with redundant data.
+- Have a log file for things that are unusual but not fatal.
+- Output the most extreme value in each variable (large and small) to the log file. This will help you find data points with errors.
+- Have standard functions to perform regression including uncertainties. Functions for power law, single coefficient, linear.
+    - Linear regression taking into account data uncertainty:
+        - <https://github.com/rsnemmen/BCES> (simplest choice, in pip)
+        - <https://github.com/jmeyers314/linmix>
+        - <https://github.com/Gabriel-p/photpy/issues/10>
+- Calculate AIC.
 - Pylint
-- pytest
-- Function to update Sqlite database with mean and standard deviation that checks that the units are as expected.
-- Mandatory uncertainty column
 - <https://software-carpentry.org/blog/2013/05/reuse-your-data.html>
 - output stored in a single file with revision number, whether code was modified
-- Use sets of fake data for testing purposes.
-- track whether uncertainty was estimated for a particular data point
 - Write Python wrapper functions to INSERT, UPDATE, and SELECT data with uncertainties and units from a Sqlite database
-- <https://stackoverflow.com/questions/18621513/python-insert-numpy-array-into-sqlite3-database>
-- <https://news.ycombinator.com/item?id=21732821>
 - <https://news.ycombinator.com/item?id=31221672>

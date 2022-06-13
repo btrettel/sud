@@ -32,11 +32,11 @@ def is_float(x):
         return False
 
 def test_is_float():
-    assert(is_float(1.1))
-    assert(not(is_float('a')))
+    assert(is_float(1.1), "check that the function works right on floats")
+    assert(not(is_float('a')), "check that the function works right on strings")
 
 def str_is_float(x):
-    assert(isinstance(x, str))
+    assert(isinstance(x, str), "function input must be a string")
     try:
         float(x)
         return True
@@ -44,8 +44,8 @@ def str_is_float(x):
         return False
 
 def test_str_is_float():
-    assert(str_is_float('1.1'))
-    assert(not(str_is_float('a')))
+    assert(str_is_float('1.1'), "check that the function works right on floats")
+    assert(not(str_is_float('a')), "check that the function works right on strings")
 
 def has_uncertainty(x):
     # This will work for floats, arrays, ndarrays, strs, and bools.
@@ -391,8 +391,9 @@ def create_db(table_name):
         data = json.load(f)
         
         for variable in data['variables']:
-            assert('variable' in variable.keys())
+            assert('variable' in variable.keys(), "all variables must have a variable name")
             print("Reading variable:", variable['variable'])
+            assert(not(' ' in variable['variable']), "no spaces in variable names")
             
             # Data validation
             
@@ -453,6 +454,9 @@ def create_db(table_name):
                 assert(isinstance(variable['not_null'], bool))
             else:
                 variable['not_null'] = False
+            
+            if 'set' in variable.keys():
+                assert(len(variable['set']) > 1, "the number of set members must be greater than 1")
             
             # construct the query
             
@@ -544,7 +548,7 @@ def create_db(table_name):
     
     return con
 
-def add_data(con, df):
+def insert_data(con, df):
     c = con.cursor()
     
     # Get a list of all variables available.
@@ -578,6 +582,7 @@ def add_data(con, df):
                 variable_magnitude = df[variable][i].magnitude
                 
                 # TODO: Check that units match.
+                # TODO: For variables which can be null, if there is a mean, require a std_dev too. Sqlite by itself will not be able to enforce that.
                 
                 if has_uncertainty(df[variable][i]):
                     # For variables with uncertainty, split into mean and std_dev and insert both.
@@ -634,19 +639,12 @@ ureg.define('fraction = [] = frac')
 ureg.define('percent = 1e-2 frac = pct')
 ureg.define('ndm = []') # Non-DiMensional
 
-# TODO: Write wrapper functions so that you can switch out Pint and uncertainties later if you want to.
-# TODO: Add docstrings.
-# TODO: Add covariance column. Constraint: <https://math.stackexchange.com/a/3830254>
-# TODO: Recognize boolean variables even though they are stored as integers in the database. Convert them to booleans when reading.
-# TODO: For variables which can be null, if there is a mean, require a std_dev too. Sqlite by itself will not be able to enforce that.
-# TODO: Add tests for add_percent_uncertainty and add_absolute_uncertainty where the ndarray has nans.
-
 con = create_db('test')
 
 df = read_csv('data/test.csv')
 
 df['U'] = add_absolute_uncertainty(df['U'], 0.1 * ureg.meter / ureg.second)
 
-add_data(con, df)
+insert_data(con, df)
 
 con.close()
