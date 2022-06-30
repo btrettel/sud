@@ -32,11 +32,11 @@ def is_float(x):
         return False
 
 def test_is_float():
-    assert(is_float(1.1), "check that the function works right on floats")
-    assert(not(is_float('a')), "check that the function works right on strings")
+    assert is_float(1.1), "check that the function works right on floats"
+    assert not(is_float('a')), "check that the function works right on strings"
 
 def str_is_float(x):
-    assert(isinstance(x, str), "function input must be a string")
+    assert isinstance(x, str), "function input must be a string"
     try:
         float(x)
         return True
@@ -44,8 +44,8 @@ def str_is_float(x):
         return False
 
 def test_str_is_float():
-    assert(str_is_float('1.1'), "check that the function works right on floats")
-    assert(not(str_is_float('a')), "check that the function works right on strings")
+    assert str_is_float('1.1'), "check that the function works right on floats"
+    assert not(str_is_float('a')), "check that the function works right on strings"
 
 def has_uncertainty(x):
     # This will work for floats, arrays, ndarrays, strs, and bools.
@@ -74,41 +74,41 @@ def has_uncertainty(x):
 def test_has_uncertainty():
     # float without uncertainty
     x = 0.20
-    assert(not(has_uncertainty(x)))
+    assert not(has_uncertainty(x))
     
     # float with uncertainty
     x = ufloat(0.20, 0.01)
-    assert(has_uncertainty(x))
+    assert has_uncertainty(x)
     
     # ndarray without uncertainty
     x = np.array([1., 2.])
-    assert(not(has_uncertainty(x)))
+    assert not(has_uncertainty(x))
     
     # ndarray with uncertainty
     x = unumpy.uarray([1, 2], [0.01, 0.002])
-    assert(has_uncertainty(x))
+    assert has_uncertainty(x)
     
     # float with units without uncertainty
     x = 0.20 * ureg.meter
-    assert(not(has_uncertainty(x)))
+    assert not(has_uncertainty(x))
     
     # float with units with uncertainty
     x = ufloat(0.20, 0.01) * ureg.meter
-    assert(has_uncertainty(x))
+    assert has_uncertainty(x)
     
     # ndarray with units without uncertainty
     x = ureg.Quantity(np.array([1., 2.]), ureg.meter)
-    assert(not(has_uncertainty(x)))
+    assert not(has_uncertainty(x))
     
     # ndarray with units with uncertainty
     x = ureg.Quantity(unumpy.uarray([1, 2], [0.01, 0.002]), ureg.meter)
-    assert(has_uncertainty(x))
+    assert has_uncertainty(x)
     
     # string
-    assert(not(has_uncertainty('test')))
+    assert not(has_uncertainty('test'))
     
     # bool
-    assert(not(has_uncertainty(True)))
+    assert not(has_uncertainty(True))
 
 def has_units(x):
     # This will work for floats, arrays, ndarrays, strs, and bools.
@@ -137,19 +137,19 @@ def has_units(x):
 def test_has_units():
     # float without units
     x = 0.20
-    assert(not(has_units(x)))
+    assert not(has_units(x))
     
     # float with units
     x = 0.20 * ureg.meter
-    assert(has_units(x))
+    assert has_units(x)
     
     # ndarray without units
     x = np.array([1., 2.])
-    assert(not(has_units(x)))
+    assert not(has_units(x))
     
     # ndarray with units
     x = ureg.Quantity(np.array([1., 2.]), ureg.meter)
-    assert(has_units(x))
+    assert has_units(x)
 
 def read_csv(filename):
     with open(filename) as f:
@@ -163,7 +163,7 @@ def read_csv(filename):
             unit = ''
             short_field_name = field_name
             if '(' in field_name:
-                assert(')' in field_name)
+                assert ')' in field_name
                 unit = field_name[field_name.index('(')+1:]
                 unit = unit[0:unit.index(')')]
                 short_field_name = field_name[0:field_name.index('(')-1].strip()
@@ -178,7 +178,7 @@ def read_csv(filename):
                     var_is_float = False
                     
                     if (unit == 'filename') and (value != ''):
-                        assert(os.path.isfile(value))
+                        assert os.path.isfile(value)
                 elif unit == 'bool':
                     if row[field_name].lower() == 'true':
                         value = True
@@ -213,13 +213,13 @@ def read_csv(filename):
     
     # Make sure that all of the keys have the same length.
     for short_field_name in short_field_names:
-        assert(len(df[short_field_name]) == len(df[short_field_names[0]]))
+        assert len(df[short_field_name]) == len(df[short_field_names[0]])
     
     # Add uncertainties if present.
     for short_field_name, unit in zip(short_field_names, units):
         if short_field_name.endswith(' uncertainty'):
             short_field_name_nominal = short_field_name.replace(' uncertainty', '').strip()
-            assert(short_field_name_nominal in df.keys())
+            assert short_field_name_nominal in df.keys()
             arr = np.array([])
             for nominal, std_dev in zip(df[short_field_name_nominal], df[short_field_name]):
                 nominal_magnitude = nominal.magnitude
@@ -230,7 +230,7 @@ def read_csv(filename):
             del df[short_field_name]
         if short_field_name.endswith(' uncertainty %'):
             short_field_name_nominal = short_field_name.replace(' uncertainty %', '').strip()
-            assert(short_field_name_nominal in df.keys())
+            assert short_field_name_nominal in df.keys()
             arr = np.array([])
             for nominal, percent_uncertainty in zip(df[short_field_name_nominal], df[short_field_name]):
                 nominal_magnitude = nominal.magnitude
@@ -247,45 +247,45 @@ def test_read_csv():
     
     # Test that the correct number of rows is read.
     for key in df.keys():
-        assert(len(df[key]) == 5)
+        assert len(df[key]) == 5
     
     # Test that the correct number of cols is read.
-    assert(len(df.keys()) == 6)
+    assert len(df.keys()) == 6
     
     # Test that the correct units are read.
-    assert(df['L'].check('[length]'))
-    assert(df['Re'].check(''))
+    assert df['L'].check('[length]')
+    assert df['Re'].check('')
     
     # Test that data with uncertainties has uncertainties.
-    assert(has_uncertainty(df['L']))
-    assert(has_uncertainty(df['Re']))
+    assert has_uncertainty(df['L'])
+    assert has_uncertainty(df['Re'])
     
     # Check that str and filename columns are strings, and that the bool columns are bools.
     for value in df['classification']:
-        assert(isinstance(value, str))
+        assert isinstance(value, str)
     for value in df['photo']:
-        assert(isinstance(value, str))
+        assert isinstance(value, str)
     for value in df['screen']:
-        assert(isinstance(value, bool))
+        assert isinstance(value, bool)
     
     # Check that the numbers are as expected, including both mean and uncertainties.
-    assert(all_close_ud(df['L'], ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm)))
-    assert(all_close_ud(df['Re'], ureg.Quantity(unumpy.uarray([100000, 100000, 100000, 100000, 100000], (100000 / 1.959963984540054) * np.array([0.1, 0.1, 0.2, 0.2, 0.2])), ureg('ndm'))))
-    assert(np.allclose(df['U'].magnitude, np.array([np.nan, 2, np.nan, 4, 7]), equal_nan=True))
-    assert(df['screen'] == [False, False, True, True, False])
-    assert(df['classification'] == ['A', 'B', 'C', 'A', 'C'])
-    assert(df['photo'] == ['', '', '', 'data/asset_hydraulic_1951_fig_10.jpg', ''])
+    assert all_close_ud(df['L'], ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm))
+    assert all_close_ud(df['Re'], ureg.Quantity(unumpy.uarray([100000, 100000, 100000, 100000, 100000], (100000 / 1.959963984540054) * np.array([0.1, 0.1, 0.2, 0.2, 0.2])), ureg('ndm')))
+    assert np.allclose(df['U'].magnitude, np.array([np.nan, 2, np.nan, 4, 7]), equal_nan=True)
+    assert df['screen'] == [False, False, True, True, False]
+    assert df['classification'] == ['A', 'B', 'C', 'A', 'C']
+    assert df['photo'] == ['', '', '', 'data/asset_hydraulic_1951_fig_10.jpg', '']
     
     # Check that filenames exist.
     for value in df['photo']:
         if value != '':
-            assert(os.path.isfile(value))
+            assert os.path.isfile(value)
 
 def all_close_ud(arr1, arr2):
-    assert(has_uncertainty(arr1))
-    assert(has_units(arr1))
-    assert(has_uncertainty(arr2))
-    assert(has_units(arr2))
+    assert has_uncertainty(arr1)
+    assert has_units(arr1)
+    assert has_uncertainty(arr2)
+    assert has_units(arr2)
     
     arr1_magnitude_nominal = []
     arr1_magnitude_std_dev = []
@@ -306,13 +306,13 @@ def all_close_ud(arr1, arr2):
     return (np.allclose(arr1_magnitude_nominal, arr2_magnitude_nominal, equal_nan=True) and np.allclose(arr1_magnitude_std_dev, arr2_magnitude_std_dev, equal_nan=True))
 
 def test_all_close_ud():
-    assert(all_close_ud(ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm), ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm)))
-    assert(not(all_close_ud(ureg.Quantity(unumpy.uarray([0.2, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm), ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm))))
-    assert(not(all_close_ud(ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.1, 0.05, 0.05, 0.2, 0.2]), ureg.mm), ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm))))
+    assert all_close_ud(ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm), ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm))
+    assert not(all_close_ud(ureg.Quantity(unumpy.uarray([0.2, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm), ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm)))
+    assert not(all_close_ud(ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.1, 0.05, 0.05, 0.2, 0.2]), ureg.mm), ureg.Quantity(unumpy.uarray([0.1, 0.2, 0.3, 0.4, 0.5], [0.05, 0.05, 0.05, 0.2, 0.2]), ureg.mm)))
 
 def add_percent_uncertainty(arr, percent):
-    assert(not(has_uncertainty(arr)))
-    assert(has_units(arr))
+    assert not(has_uncertainty(arr))
+    assert has_units(arr)
     
     return_arr = np.array([])
     
@@ -330,22 +330,22 @@ def add_percent_uncertainty(arr, percent):
 
 def test_add_percent_uncertainty():
     arr = ureg.Quantity(np.array([1., 2., 3.]), ureg.meter)
-    assert(not(has_uncertainty(arr)))
+    assert not(has_uncertainty(arr))
     
     arr = add_percent_uncertainty(arr, 10.)
     
     # test that uncertainty is present
-    assert(has_uncertainty(arr))
+    assert has_uncertainty(arr)
     
     # test that the amount of uncertainty is correct
     for value in arr:
         number = value.magnitude
-        assert(math.isclose(number.std_dev, number.nominal_value * 0.1 / z))
+        assert math.isclose(number.std_dev, number.nominal_value * 0.1 / z)
 
 def add_absolute_uncertainty(arr, uncertainty):
-    assert(not(has_uncertainty(arr)))
-    assert(has_units(arr))
-    assert(has_units(uncertainty))
+    assert not(has_uncertainty(arr))
+    assert has_units(arr)
+    assert has_units(uncertainty)
     
     return_arr = np.array([])
     
@@ -363,22 +363,22 @@ def add_absolute_uncertainty(arr, uncertainty):
 
 def test_add_absolute_uncertainty():
     arr = ureg.Quantity(np.array([1., 2., 3.]), ureg.meter)
-    assert(not(has_uncertainty(arr)))
+    assert not(has_uncertainty(arr))
     
     arr = add_absolute_uncertainty(arr, 0.1 * ureg.meter)
     
     # test that uncertainty is present
-    assert(has_uncertainty(arr))
+    assert has_uncertainty(arr)
     
     # test that the amount of uncertainty is correct
     for value in arr:
         number = value.magnitude
-        assert(math.isclose(number.std_dev, 0.1 / z))
+        assert math.isclose(number.std_dev, 0.1 / z)
 
 def create_db(table_name):
     # TODO: After updating to SQlite 3.37.0 or later, add STRICT keyword. <https://www.sqlite.org/stricttables.html>
     
-    assert(len(table_name) < 24)
+    assert len(table_name) < 24
     
     data_create_query = f"CREATE TABLE {table_name} (\n{table_name}_id integer PRIMARY KEY,"
     
@@ -391,31 +391,31 @@ def create_db(table_name):
         data = json.load(f)
         
         for variable in data['variables']:
-            assert('variable' in variable.keys(), "all variables must have a variable name")
+            assert 'variable' in variable.keys(), "all variables must have a variable name"
             print("Reading variable:", variable['variable'])
-            assert(not(' ' in variable['variable']), "no spaces in variable names")
+            assert not(' ' in variable['variable']), "no spaces in variable names"
             
             # Data validation
             
-            assert('datatype' in variable.keys())
-            assert('description' in variable.keys())
+            assert 'datatype' in variable.keys()
+            assert 'description' in variable.keys()
             
-            assert(variable['datatype'] in {'int', 'float', 'str', 'bool'})
+            assert variable['datatype'] in {'int', 'float', 'str', 'bool'}
             
             if variable['datatype'] == 'float':
                 variable['datatype'] = 'real'
-                assert('units' in variable.keys())
-                assert(len(variable['units']) > 0)
-                assert('latex' in variable.keys())
-                assert(len(variable['latex']) > 0)
+                assert 'units' in variable.keys()
+                assert len(variable['units']) > 0
+                assert 'latex' in variable.keys()
+                assert len(variable['latex']) > 0
             elif variable['datatype'] == 'int':
-                assert('units' in variable.keys())
-                assert(len(variable['units']) > 0)
-                assert('latex' in variable.keys())
-                assert(len(variable['latex']) > 0)
+                assert 'units' in variable.keys()
+                assert len(variable['units']) > 0
+                assert 'latex' in variable.keys()
+                assert len(variable['latex']) > 0
             
             if (variable['datatype'] == 'str') or (variable['datatype'] == 'bool'):
-                assert(not('units' in variable.keys()))
+                assert not('units' in variable.keys())
             
             if not('units' in variable.keys()):
                 if variable['datatype'] == 'str':
@@ -423,40 +423,40 @@ def create_db(table_name):
                 elif variable['datatype'] == 'bool':
                     variable['units'] = 'bool'
             
-            assert('units' in variable.keys())
+            assert 'units' in variable.keys()
             
             if variable['datatype'] == 'str':
                 variable['datatype'] = 'text'
             elif variable['datatype'] == 'bool':
                 variable['datatype'] = 'int'
             
-            assert(len(variable['description']) > 0)
+            assert len(variable['description']) > 0
             
             if 'lower_bound' in variable.keys():
                 # If lower_bound defined, then datatype must be real.
-                assert(variable['datatype'] == 'real')
+                assert variable['datatype'] == 'real'
                 
                 # If lower_bound defined, then the number must be a float.
-                assert(is_float(variable['lower_bound']))
+                assert is_float(variable['lower_bound'])
             
             if 'upper_bound' in variable.keys():
                 # If upper_bound defined, then datatype must be real.
-                assert(variable['datatype'] == 'real')
+                assert variable['datatype'] == 'real'
                 
                 # If upper_bound defined, then the number must be a float.
-                assert(is_float(variable['upper_bound']))
+                assert is_float(variable['upper_bound'])
                 
                 # If both upper and lower bounds are present, check that the lower is lower than the upper.
                 if 'lower_bound' in variable.keys():
-                    assert(variable['lower_bound'] < variable['upper_bound'])
+                    assert variable['lower_bound'] < variable['upper_bound']
             
             if 'not_null' in variable.keys():
-                assert(isinstance(variable['not_null'], bool))
+                assert isinstance(variable['not_null'], bool)
             else:
                 variable['not_null'] = False
             
             if 'set' in variable.keys():
-                assert(len(variable['set']) > 1, "the number of set members must be greater than 1")
+                assert len(variable['set']) > 1, "the number of set members must be greater than 1"
             
             # construct the query
             
@@ -501,24 +501,24 @@ def create_db(table_name):
     data_create_query += "\n);"
     #data_create_query += "\n) STRICT;"
     
-    assert(not('variable[' in data_create_query))
-    assert(not('variable[' in info_create_query))
+    assert not('variable[' in data_create_query)
+    assert not('variable[' in info_create_query)
     
-    assert(data_create_query.startswith('CREATE TABLE '))
-    assert(data_create_query.endswith(');'))
-    #assert(data_create_query.endswith(') STRICT;'))
-    assert('PRIMARY KEY' in data_create_query)
-    assert(data_create_query.count('(') == data_create_query.count(')'))
+    assert data_create_query.startswith('CREATE TABLE ')
+    assert data_create_query.endswith(');')
+    #assert data_create_query.endswith(') STRICT;')
+    assert 'PRIMARY KEY' in data_create_query
+    assert data_create_query.count('(') == data_create_query.count(')')
     
-    assert(info_create_query.startswith('CREATE TABLE '))
-    assert(info_create_query.endswith(');'))
-    #assert(info_create_query.endswith(') STRICT;'))
-    assert('PRIMARY KEY' in info_create_query)
-    assert(info_create_query.count('(') == info_create_query.count(')'))
+    assert info_create_query.startswith('CREATE TABLE ')
+    assert info_create_query.endswith(');')
+    #assert info_create_query.endswith(') STRICT;')
+    assert 'PRIMARY KEY' in info_create_query
+    assert info_create_query.count('(') == info_create_query.count(')')
     
     # Assert that number of question marks equals length of params.
     for info_insert_query, info_insert_params in zip(info_insert_queries, info_insert_params_arr):
-        assert(info_insert_query.count('?') == len(info_insert_params))
+        assert info_insert_query.count('?') == len(info_insert_params)
     
     db_file = f"data/{table_name}.sqlite"
     
@@ -556,7 +556,7 @@ def insert_data(con, df):
     variables = []
     c.execute("select * from sqlite_master;")
     query_result = c.fetchall()
-    assert(len(query_result) == 2)
+    assert len(query_result) == 2
     table_name = query_result[0][1]
     c.execute(f"pragma table_info({table_name});")
     query_result = c.fetchall()
@@ -566,7 +566,7 @@ def insert_data(con, df):
     
     # Check that all variables in the database are present in the dataframe.
     for variable in df.keys():
-        assert(variable in variables)
+        assert variable in variables
     
     # Add data to database.
     rows = len(df[list(df.keys())[0]])
@@ -620,7 +620,7 @@ def insert_data(con, df):
         
         insert_query = insert_query[:-2] + ");"
         
-        assert(insert_query.count('?') == len(insert_params))
+        assert insert_query.count('?') == len(insert_params)
         
         print(insert_query)
         print(insert_params)
